@@ -38,4 +38,44 @@
             end
         end
     end  # sum abs2
+
+    # @testset "cumsum" begin
+    #     @testset "Array{$T}" for T in [Float64,]
+    #         v, vdot, vbar = rand(T, 5), rand(T, 5), rand(T, 5)
+    #         m, mdot, mbar = rand(T, 3, 4), rand(T, 3, 4), rand(T, 3, 4)
+
+    #         frule_test(cumsum, (v, vdot))
+    #         rrule_test(cumsum, cumsum(v), (v, vbar))
+
+    #         frule_test(cumsum, (m, mdot); fkwargs=(dims=1,))
+    #         rrule_test(cumsum, cumsum(m; dims=1), (m, mbar); fkwargs=(dims=1,))
+
+    #         frule_test(cumsum, (m, mdot); fkwargs=(dims=2,))
+    #         rrule_test(cumsum, cumsum(m; dims=2), (m, mbar); fkwargs=(dims=2,))
+    #     end
+    # end
+
+    @testset "prod" begin
+        @testset "Array{$T}" for T in [Float64,]
+            @testset "size = $sz, dims = $dims" for (sz, dims) in [
+                ((12,), :), #((3,4), :), ((12,), 1), ((3,4), 1), ((3,4), 2), ((3,4), [1,2])
+                ]
+                x, xdot, xbar = randn(T, sz), randn(T, sz), randn(T, sz)
+                # frule_test(prod, (x, xdot); fkwargs=dims)
+                rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=dims)
+
+                x[1] = 0
+                rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=dims)
+
+                x[5] = 0
+                rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=dims)
+
+                # x[3] = x[7] = 0
+                # frule_test(prod, (x, xdot); fkwargs=dims)
+                # rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=dims)
+            end
+        end
+
+    [1f-20, 1f-20, 1f-20]
+    end # prod
 end
