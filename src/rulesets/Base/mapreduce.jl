@@ -82,3 +82,83 @@ function rrule(::typeof(cumsum), x::AbstractArray{T}; dims=1) where {T<:Number}
     return y, cumsum_pullback
 end
 
+#####
+##### `prod`
+#####
+
+function frule((_, ẋ), ::typeof(prod), x; dims=:)
+    # ???
+    return prod(x; dims=dims), sum(ẋ; dims=dims)
+end
+
+function rrule(::typeof(prod), x::AbstractArray{T}; dims=:) where {T<:Number}
+    y = prod(x; dims=dims)
+    function prod_pullback(dy)
+        x_thunk = if dims == (:)
+            InplaceableThunk(
+                @thunk(∇prod(x, dy, y)),  # This is usually y ./ x .* dy
+                dx -> ∇prod!(dx, x, dy, y)
+            )
+        elseif any(iszero, x)  # Only cases where ./x would give NaN
+            InplaceableThunk(
+                @thunk(∇prod_dims(dims, x, dy, y)),
+                dx -> ∇prod_dims!(dx, dims, x, dy, y)
+            )
+        else
+            InplaceableThunk(
+                @thunk(y ./ x .* dy),
+                dx -> dx .+= y ./ x .* dy
+            )
+        end
+        (NO_FIELDS, x_thunk)
+    end
+    return y, prod_pullback
+end
+
+function ∇prod_dims(dims, x, dy=fill!(sum(x; dims=dims), 1), y=prod(x; dims=dims))
+    T = promote_type(eltype(x), eltype(dy))
+    dx = fill!(similar(x, T), 0)
+    ∇prod_dims!(dx, x, dy, y)
+end
+
+function ∇prod_dims!(dx, dims, x, dy, y)
+    iters = ntuple(d -> d in dims ? tuple(:) : axes(x,d), ndims(x))
+    for ind in Iterators.product(iters...)
+        jay = map(i -> i isa Colon ? 1 : i, ind)
+        @inbounds @views ∇prod!(dx[ind...], x[ind...], dy[jay...], y[jay...])
+    end
+    dx
+end
+
+# To opt out of this mapslices thing, and accept NaN instead, you could define:
+# ∇prod_dims!(dx, dims, x::CuArray, dy, y) = dx .+= y ./ x .* dy
+
+function ∇prod(x, dy::Number=1, y::Number=prod(x))
+    T = promote_type(eltype(x), eltype(dy))
+    dx = similar(x, T) .= 0
+    ∇prod!(dx, x, y, dy)
+end
+
+function ∇prod!(dx, x, dy::Number=1, y::Number=prod(x))
+    numzero = count(iszero, x)
+    if numzero == 0  # This can happen while y==0, if there are several small xs
+        dx .+= y ./ x .* dy
+    elseif numzero > 1
+        dx
+    else
+        ∇prod_one_zero!(dx, x, dy)
+    end
+end
+
+function ∇prod_one_zero!(dx, x, dy::Number=1)  # Assumes exactly one x is zero
+    i_zero = 0
+    p_rest = one(promote_type(eltype(x), typeof(dy)))
+    for i in eachindex(x)
+        xi = @inbounds x[i]
+        p_rest *= ifelse(iszero(xi), one(eltype(x)), xi)
+        i_zero = ifelse(iszero(xi), i, i_zero)
+    end
+    dx[i_zero] += p_rest * dy
+end
+
+
