@@ -55,3 +55,30 @@ function rrule(
     end
     return y, sum_abs2_pullback
 end
+
+#####
+##### `cumsum`
+#####
+
+function frule((_, ẋ), ::typeof(cumsum), x; dims=1)
+    return cumsum(x; dims=dims), cumsum(ẋ; dims=dims)
+end
+
+function rrule(::typeof(cumsum), x::AbstractArray{T}; dims=1) where {T<:Number}
+    y = cumsum(x; dims=dims)
+    function cumsum_pullback(ȳ)
+        x_thunk = @thunk(reverse(cumsum(reverse(ȳ; dims=dims); dims=dims); dims=dims))
+        return (NO_FIELDS, x_thunk)
+    end
+    # function cumsum_pullback(ȳ::StridedArray)
+    #     # x_thunk = @thunk(reverse!(cumsum!(reverse(ȳ; dims=dims); dims=dims); dims=dims))
+    #     x_thunk = @thunk begin
+    #         tmp = reverse(ȳ; dims=dims)
+    #         cumsum!(tmp, tmp; dims=dims)
+    #         reverse!(tmp; dims=dims) # fails
+    #     end
+    #     return (NO_FIELDS, x_thunk)
+    # end
+    return y, cumsum_pullback
+end
+
