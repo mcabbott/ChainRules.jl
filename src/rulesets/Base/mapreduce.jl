@@ -67,18 +67,15 @@ end
 function rrule(::typeof(cumsum), x::AbstractArray{T}; dims=1) where {T<:Number}
     y = cumsum(x; dims=dims)
     function cumsum_pullback(ȳ)
-        x_thunk = @thunk(reverse(cumsum(reverse(ȳ; dims=dims); dims=dims); dims=dims))
-        return (NO_FIELDS, x_thunk)
+        tmp = reverse(ȳ; dims=dims)
+        dx = if tmp isa StridedArray && VERSION >= v"1.6-"
+            cumsum!(tmp, tmp; dims=dims)
+            reverse!(tmp; dims=dims)
+        else
+            reverse(cumsum(tmp; dims=dims); dims=dims)
+        end
+        return (NO_FIELDS, dx)
     end
-    # function cumsum_pullback(ȳ::StridedArray)
-    #     # x_thunk = @thunk(reverse!(cumsum!(reverse(ȳ; dims=dims); dims=dims); dims=dims))
-    #     x_thunk = @thunk begin
-    #         tmp = reverse(ȳ; dims=dims)
-    #         cumsum!(tmp, tmp; dims=dims)
-    #         reverse!(tmp; dims=dims) # fails
-    #     end
-    #     return (NO_FIELDS, x_thunk)
-    # end
     return y, cumsum_pullback
 end
 

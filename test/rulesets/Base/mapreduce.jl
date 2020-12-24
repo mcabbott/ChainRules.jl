@@ -39,21 +39,26 @@
         end
     end  # sum abs2
 
-    # @testset "cumsum" begin
-    #     @testset "Array{$T}" for T in [Float64,]
-    #         v, vdot, vbar = rand(T, 5), rand(T, 5), rand(T, 5)
-    #         m, mdot, mbar = rand(T, 3, 4), rand(T, 3, 4), rand(T, 3, 4)
+    @testset "cumsum" begin
+        @testset "Array{$T}" for T in [Float64, ComplexF64]
+            v, vdot, vbar = rand(T, 5), rand(T, 5), rand(T, 5)
+            m, mdot, mbar = rand(T, 3, 4), rand(T, 3, 4), rand(T, 3, 4)
 
-    #         frule_test(cumsum, (v, vdot))
-    #         rrule_test(cumsum, cumsum(v), (v, vbar))
+            frule_test(cumsum, (v, vdot))
+            rrule_test(cumsum, cumsum(v), (v, vbar))
 
-    #         frule_test(cumsum, (m, mdot); fkwargs=(dims=1,))
-    #         rrule_test(cumsum, cumsum(m; dims=1), (m, mbar); fkwargs=(dims=1,))
+            w = view(vec(m), [1,3,5,7,9])
+            @test !(w isa StridedArray)
+            frule_test(cumsum, (w, vdot))
+            rrule_test(cumsum, cumsum(w), (w, vbar))
 
-    #         frule_test(cumsum, (m, mdot); fkwargs=(dims=2,))
-    #         rrule_test(cumsum, cumsum(m; dims=2), (m, mbar); fkwargs=(dims=2,))
-    #     end
-    # end
+            frule_test(cumsum, (m, mdot); fkwargs=(dims=1,))
+            rrule_test(cumsum, cumsum(m; dims=1), (m, mbar); fkwargs=(dims=1,))
+
+            frule_test(cumsum, (m, mdot); fkwargs=(dims=2,))
+            rrule_test(cumsum, cumsum(m; dims=2), (m, mbar); fkwargs=(dims=2,))
+        end
+    end
 
     @testset "prod" begin
         @testset "Array{$T}" for T in [Float64, ComplexF64]
