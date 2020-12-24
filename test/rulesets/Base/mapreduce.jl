@@ -56,14 +56,14 @@
     # end
 
     @testset "prod" begin
-        @testset "Array{$T}" for T in [Float64] #, ComplexF64]
+        @testset "Array{$T}" for T in [Float64, ComplexF64]
             @testset "size = $sz, dims = $dims" for (sz, dims) in [
                 ((12,), :), ((12,), 1),
                 ((3,4), 1), ((3,4), 2), ((3,4), :), ((3,4), [1,2]),
                 ((3,4,1), 1), ((3,2,2), 3), ((3,2,2), 2:3),
                 ]
                 x, xdot, xbar = randn(T, sz), randn(T, sz), randn(T, sz)
-                # frule_test(prod, (x, xdot); fkwargs=dims)
+                # frule_test(prod, (x, xdot); fkwargs=(dims=dims,))
                 rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=(dims=dims,))
 
                 x[1] = 0
@@ -73,8 +73,15 @@
                 rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=(dims=dims,))
 
                 x[3] = x[7] = 0  # two zeros along some slice, for any dims
-                # frule_test(prod, (x, xdot); fkwargs=dims)
+                # frule_test(prod, (x, xdot); fkwargs=(dims=dims,))
                 rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=(dims=dims,))
+
+                if ndims(x) == 3
+                    xp = PermutedDimsArray(x, (3,2,1))  # not a StridedArray
+                    xpdot, xpbar = permutedims(xdot, (3,2,1)), permutedims(xbar, (3,2,1))
+                    # frule_test(prod, (xp, xpdot); fkwargs=dims)
+                    rrule_test(prod, prod(xp; dims=dims), (xp, xpbar); fkwargs=(dims=dims,))
+                end
             end
         end
         @testset "Array{Float32}" begin
