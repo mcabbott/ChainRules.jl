@@ -118,17 +118,26 @@ end
 function ∇prod_dims(dims, x, dy=fill!(sum(x; dims=dims), 1), y=prod(x; dims=dims))
     T = promote_type(eltype(x), eltype(dy))
     dx = fill!(similar(x, T), 0)
-    ∇prod_dims!(dx, x, dy, y)
+    ∇prod_dims!(dx, dims, x, dy, y)
+    dx
 end
 
 function ∇prod_dims!(dx, dims, x, dy, y)
     iters = ntuple(d -> d in dims ? tuple(:) : axes(x,d), ndims(x))
+    # @show x y dx dy
     for ind in Iterators.product(iters...)
-        jay = map(i -> i isa Colon ? 1 : i, ind)
-        @inbounds @views ∇prod!(dx[ind...], x[ind...], dy[jay...], y[jay...])
+        # if y isa AbstractArray
+            jay = map(i -> i isa Colon ? 1 : i, ind)
+            # @show ind jay
+            @views ∇prod!(dx[ind...], x[ind...], dy[jay...], y[jay...])
+        # else
+        #     @show ind
+        #     @views ∇prod!(dx[ind...], x[ind...], dy, y)
+        # end
     end
     dx
 end
+
 
 # To opt out of this mapslices thing, and accept NaN instead, you could define:
 # ∇prod_dims!(dx, dims, x::CuArray, dy, y) = dx .+= y ./ x .* dy
@@ -137,6 +146,7 @@ function ∇prod(x, dy::Number=1, y::Number=prod(x))
     T = promote_type(eltype(x), eltype(dy))
     dx = similar(x, T) .= 0
     ∇prod!(dx, x, y, dy)
+    dx
 end
 
 function ∇prod!(dx, x, dy::Number=1, y::Number=prod(x))
@@ -148,6 +158,7 @@ function ∇prod!(dx, x, dy::Number=1, y::Number=prod(x))
     else
         ∇prod_one_zero!(dx, x, dy)
     end
+    dx
 end
 
 function ∇prod_one_zero!(dx, x, dy::Number=1)  # Assumes exactly one x is zero
@@ -159,6 +170,8 @@ function ∇prod_one_zero!(dx, x, dy::Number=1)  # Assumes exactly one x is zero
         i_zero = ifelse(iszero(xi), i, i_zero)
     end
     dx[i_zero] += p_rest * dy
+    dx
 end
+
 
 

@@ -56,26 +56,30 @@
     # end
 
     @testset "prod" begin
-        @testset "Array{$T}" for T in [Float64,]
+        @testset "Array{$T}" for T in [Float64] #, ComplexF64]
             @testset "size = $sz, dims = $dims" for (sz, dims) in [
-                ((12,), :), #((3,4), :), ((12,), 1), ((3,4), 1), ((3,4), 2), ((3,4), [1,2])
+                ((12,), :), ((12,), 1),
+                ((3,4), 1), ((3,4), 2), ((3,4), :), ((3,4), [1,2]),
+                ((3,4,1), 1), ((3,2,2), 3), ((3,2,2), 2:3),
                 ]
                 x, xdot, xbar = randn(T, sz), randn(T, sz), randn(T, sz)
                 # frule_test(prod, (x, xdot); fkwargs=dims)
-                rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=dims)
+                rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=(dims=dims,))
 
                 x[1] = 0
-                rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=dims)
+                rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=(dims=dims,))
 
                 x[5] = 0
-                rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=dims)
+                rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=(dims=dims,))
 
-                # x[3] = x[7] = 0
+                x[3] = x[7] = 0  # two zeros along some slice, for any dims
                 # frule_test(prod, (x, xdot); fkwargs=dims)
-                # rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=dims)
+                rrule_test(prod, prod(x; dims=dims), (x, xbar); fkwargs=(dims=dims,))
             end
         end
+        @testset "Array{Float32}" begin
 
-    [1f-20, 1f-20, 1f-20]
+            [1f-20, 1f-20, 1f-20]
+        end
     end # prod
 end
