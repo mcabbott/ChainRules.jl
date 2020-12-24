@@ -90,8 +90,11 @@
             end
         end
         @testset "Array{Float32}" begin
-
-            [1f-20, 1f-20, 1f-20]
+            v = [1f-5, 1f-10, 1f-15, 1f-20]
+            @test prod(v) == 0
+            vbar = randn(Float32, 4)
+            @test unthunk(rrule(prod, v)[2](1f0)[2]) == zeros(4)
+            rrule_test(prod, 0f0, (v, vbar))
         end
     end # prod
 end
